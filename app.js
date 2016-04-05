@@ -1,43 +1,59 @@
-// Application entry point, add application code here
+'use strict';
 
-const idrconfig = require('./config');
-const knex = require('knex')({
-    client: 'postgres',
-    connection: {
-        host: idrconfig.db_host,
-        port: idrconfig.db_port,
-        user: idrconfig.db_user,
-        password: idrconfig.db_password,
-        database: idrconfig.db_database,
-        charset: idrconfig.db_charset,
-        ssl: idrconfig.db_ssl
-    }
+const bookshelf = require('./database/database');
+const requireDir = require('require-dir');
+const _ = require('lodash');
+var async = require('asyncawait/async');
+var await = require('asyncawait/await');
+
+var createAllTables = async (dir => {
+    const tables = requireDir('./database/tables');
+    const sortedTables = _.sortBy(tables, table => table[0].order);
+    _.forEach(sortedTables, table => {
+        await (table[0].createTable(bookshelf.knex));
+    });
 });
 
-const bookshelf = require('bookshelf')(knex);
-bookshelf.plugin('virtuals');
-'use strict';
-const PlayerTable = require('./database/tables/player');
-const Player = PlayerTable.extendBookshelf(bookshelf);
-
-knex.schema.dropTableIfExists(PlayerTable.name).then(function() {
-    return PlayerTable.createTable(knex);
-}).then(function() {
-    const player = new Player({
-        hit_points: { minimum: 0, maximum: 100, current: 100 },
-        strength: { minimum: 10, maximum: 200, current: 50 }
+var dropAllTables = async (dir => {
+    const tables = requireDir('./database/tables');
+    const sortedTables = _.sortBy(tables, table => -table[0].order);
+    _.forEach(sortedTables, table => {
+        await (bookshelf.knex.schema.dropTableIfExists(table[0].name));
     });
-    player.set('name', 'John Doe');
+});
 
-    return player.save();
-}).then(function(p) {
-    console.log('User saved:', p.get('name'));
+dropAllTables()
+.then(() => createAllTables())
+.then(() => {
+    console.log('createTables');
 
-    Player.where('id', 1).fetch().then(function(user) {
-        console.log(user.toJSON());
-    }).catch(function(err) {
-        console.error(err);
-    }).finally(function() {
-        knex.destroy();
+    const Character = require('./database/tables/character')[0].Character;
+    const User = require('./database/tables/user')[0].User;
+
+    const user = new User({
+        name: 'Oipo',
+        password: 'haha'
+    });
+
+    user.save().then(u => {
+        console.log(u.toJSON());
+
+        const character = new Character({
+            name: 'John Doe',
+            gender: 'Male',
+            user_id: u.id
+        });
+
+        return character.save();
+    }).then(function(p) {
+        console.log('User saved:', p.get('name'));
+
+        User.where('id', 1).fetch({withRelated: ['characters']}).then(function(user) {
+            console.log(user.toJSON());
+        }).catch(function(err) {
+            console.error(err);
+        }).finally(function() {
+            bookshelf.knex.destroy();
+        });
     });
 });
