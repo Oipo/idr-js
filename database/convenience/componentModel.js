@@ -9,7 +9,7 @@ const ComponentModel = function(attribute, keys) {
         },
 
         get() {
-            return _.reduce(keys, (result, value, key) => { // for some reason the value and key are switched around?
+            return _.reduce(keys, (result, value, key) => {
                 result = result || {};
                 result[key] = this.get(attribute + '_' + value);
                 return result;

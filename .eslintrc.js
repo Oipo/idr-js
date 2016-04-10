@@ -21,6 +21,8 @@ module.exports = {
       "no-var": 2,
       "object-shorthand": [2, "always"],
       "prefer-const": 2,
-      "max-len": ["error", 120, 4]
+      "max-len": ["error", 120, 4],
+      "brace-style": ["error", "1tbs"],
+      "strict": 0
     }
 };
